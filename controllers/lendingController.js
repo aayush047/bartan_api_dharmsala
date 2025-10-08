@@ -59,3 +59,23 @@ exports.returnLending = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.deleteLending = async (req, res) => {
+  try {
+    const lending = await LendingItem.findById(req.params.id);
+    if (!lending) return res.status(404).json({ error: "Lending not found" });
+
+    // Optional: restore inventory for unreturned items
+    for (const i of lending.items) {
+      const inv = await InventoryItem.findById(i.itemId);
+      if (inv) inv.available += i.qty - i.returned;
+      await inv.save();
+    }
+
+    await LendingItem.findByIdAndDelete(req.params.id);
+
+    res.json({ message: "Lending deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
